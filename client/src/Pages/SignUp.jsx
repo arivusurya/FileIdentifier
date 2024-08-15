@@ -122,11 +122,16 @@ export function SignUpForm() {
         setMsg("Signup successful, please check your email for verification.");
         console.log(response?.data?.user);
         setUser(response?.data?.user);
-        // setOpenSnackBar(true);
-        // setSeverity("success");
+        setOpenSnackBar(true);
+        setSeverity("success");
         // // Update the user context with the new user data
         // updateUser(response?.data?.user);
         navigate("/"); // Redirect to the home page
+      } else if (response.status === 201) {
+        setMsg("User already exists, please sign in.");
+        setOpenSnackBar(true);
+        setSeverity("error");
+        navigate("/login");
       } else {
         setMsg("User already exists, please sign in.");
         setOpenSnackBar(true);

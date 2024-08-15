@@ -1,14 +1,17 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useUser } from "../Context/userContext"; // Adjust import path as needed
 import { Box, Typography, Button, Container, Paper } from "@mui/material";
 import axios from "axios";
 import { SERVER_URL } from "../constants";
 
 function HomePage() {
-  //   const { user } = useUser(); // Access user from context
   const { user, setUser } = useUser(); // Get context values
+
+  const [osInfo, setOsInfo] = useState("");
+  const [networkInfo, setNetworkInfo] = useState({});
+  const [ipAddress, setIpAddress] = useState("");
+
   const getUserProfile = async () => {
-    //   const { user, setUser } = useUser(); // Get context values
     try {
       const response = await axios.post(
         `${SERVER_URL}/api/auth/profile`,
@@ -23,13 +26,26 @@ function HomePage() {
       const userProfile = response.data;
 
       // Update user context and localStorage
-      setUser(userProfile);
-      localStorage.setItem("user", JSON.stringify(userProfile)); // Store user profile in localStorage
+      setUser({ ...userProfile, osInfo, networkInfo, ipAddress });
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ ...userProfile, osInfo, networkInfo, ipAddress })
+      ); // Store user profile in localStorage
 
       return userProfile; // Return user profile data if needed
     } catch (error) {
       console.error("Failed to fetch user profile", error);
       throw error; // Propagate the error
+    }
+  };
+
+  const fetchIpAddress = async () => {
+    try {
+      const response = await axios.get("https://api.ipify.org?format=json");
+      setIpAddress(response.data.ip);
+    } catch (error) {
+      console.error("Failed to fetch IP address", error);
+      setIpAddress("Unable to fetch IP address");
     }
   };
 
@@ -46,6 +62,31 @@ function HomePage() {
   };
 
   useEffect(() => {
+    // Fetch OS and Network information
+    const platform = navigator.platform;
+    const userAgent = navigator.userAgent;
+    setOsInfo(`${platform} - ${userAgent}`);
+
+    if (navigator.connection) {
+      const { effectiveType, downlink, rtt, saveData } = navigator.connection;
+      setNetworkInfo({
+        effectiveType,
+        downlink,
+        rtt,
+        saveData,
+        online: navigator.onLine,
+      });
+    } else {
+      setNetworkInfo({
+        message: "Network Information API not supported in this browser.",
+        online: navigator.onLine,
+      });
+    }
+
+    // Fetch IP address
+    fetchIpAddress();
+
+    // Fetch user profile
     getUserProfile();
   }, []);
 
@@ -72,7 +113,7 @@ function HomePage() {
           }}
         >
           <Typography variant="h4" sx={{ mb: 2 }}>
-            Welcome to Your Dashboard
+            Welcome to Your Gem AI Dashboard
           </Typography>
           {user ? (
             user.verified ? (
@@ -95,6 +136,36 @@ function HomePage() {
                 </Typography>
                 <Typography variant="body1">
                   <strong>Verified:</strong> Yes
+                </Typography>
+                <Typography variant="body1">
+                  <strong>OS Info:</strong> {user.osInfo}
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Network Info:</strong>
+                  <ul>
+                    {networkInfo.message ? (
+                      <li>{networkInfo.message}</li>
+                    ) : (
+                      <>
+                        <li>
+                          Effective Connection Type: {networkInfo.effectiveType}
+                        </li>
+                        <li>Downlink: {networkInfo.downlink} Mbps</li>
+                        <li>Round-Trip Time: {networkInfo.rtt} ms</li>
+                        <li>
+                          Save Data Mode:{" "}
+                          {networkInfo.saveData ? "Enabled" : "Disabled"}
+                        </li>
+                        <li>
+                          Online Status:{" "}
+                          {networkInfo.online ? "Online" : "Offline"}
+                        </li>
+                      </>
+                    )}
+                  </ul>
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Yours Public IP Address:</strong> {ipAddress}
                 </Typography>
               </Box>
             ) : (
